@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delicious Journal · 投稿审稿系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Georgia', 'Times New Roman', Times, serif;
+        }
+
+        body {
+            background: #faf7f2;
+            color: #2c3e4f;
+            padding: 2rem 1rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 期刊刊头 */
+        .journal-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            border-bottom: 2px solid #c44536;
+            padding-bottom: 1rem;
+        }
+
+        .journal-header h1 {
+            font-size: 3.5rem;
+            font-weight: 400;
+            letter-spacing: 4px;
+            color: #c44536;
+            text-transform: uppercase;
+            word-break: keep-all;
+        }
+
+        .journal-header h1 small {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            display: block;
+            text-transform: none;
+            letter-spacing: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .journal-header p {
+            font-style: italic;
+            color: #4a5b6e;
+            margin-top: 0.5rem;
+        }
+
+        /* 投稿卡片 */
+        .paper-card {
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem 1.8rem;
+            margin-bottom: 1.8rem;
+            border-left: 6px solid;
+            transition: all 0.2s ease;
+        }
+
+        .paper-card:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+        }
+
+        .paper-card.submitted {
+            border-left-color: #f39c12;
+        }
+        .paper-card.accepted {
+            border-left-color: #27ae60;
+        }
+        .paper-card.rejected {
+            border-left-color: #c0392b;
+            opacity: 0.8;
+        }
+
+        .paper-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e2b36;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .paper-title .status-badge {
+            font-size: 0.85rem;
+            font-weight: 400;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            background: #ecf0f1;
+            color: #2c3e50;
+            letter-spacing: 0.3px;
+        }
+
+        .paper-title .status-badge.submitted { background: #fcf3e0; color: #b85c1a; }
+        .paper-title .status-badge.accepted { background: #e2f3e4; color: #1e6f3f; }
+        .paper-title .status-badge.rejected { background: #f5e1de; color: #a5281b; }
+
+        .paper-meta {
+            font-size: 1rem;
+            color: #4d6575;
+            margin-bottom: 1rem;
+            border-bottom: 1px dashed #d9d0c5;
+            padding-bottom: 0.75rem;
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .paper-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .paper-abstract {
+            font-size: 1rem;
+            color: #2d3e4f;
+            margin-bottom: 1rem;
+            background: #f9f5ef;
+            padding: 0.8rem 1.2rem;
+            border-radius: 24px;
+            line-height: 1.6;
+        }
+
+        .paper-file {
+            font-size: 0.95rem;
+            color: #445e6c;
+            margin-bottom: 1.2rem;
+            background: #f0ede9;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            display: inline-block;
+        }
+
+        .paper-actions {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: none;
+            border: 1.5px solid transparent;
+            padding: 0.5rem 1.5rem;
+            font-size: 0.95rem;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            font-family: inherit;
+            transition: 0.15s;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-sm {
+            padding: 0.3rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-primary {
+            background: #c44536;
+            border-color: #c44536;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #a5372b;
+            border-color: #a5372b;
+        }
+
+        .btn-accept {
+            background: #e2f3e4;
+            border-color: #27ae60;
+            color: #1e6f3f;
+        }
+        .btn-accept:hover {
+            background: #c0e3c4;
+        }
+
+        .btn-reject {
+            background: #f5e1de;
+            border-color: #c0392b;
+            color: #a5281b;
+        }
+        .btn-reject:hover {
+            background: #eac9c4;
+        }
+
+        .btn-outline {
+            border-color: #b0a28f;
+            color: #4a3f35;
+        }
+        .btn-outline:hover {
+            background: #e2dad2;
+        }
+
+        /* 投稿表单区域 */
+        .submit-section {
+            background: #ffffffd9;
+            backdrop-filter: blur(2px);
+            border-radius: 30px;
+            padding: 2rem 2.2rem;
+            margin-bottom: 3.5rem;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e8d9cc;
+        }
+
+        .submit-section h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #2b404e;
+            margin-bottom: 1.5rem;
+            border-left: 8px solid #c44536;
+            padding-left: 1.2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #3e4f5e;
+            font-size: 0.95rem;
+            letter-spacing: 0.4px;
+        }
+
+        .form-group input, 
+        .form-group textarea {
+            border: 1px solid #d6cbbc;
+            background: #fffcf8;
+            padding: 0.8rem 1.2rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: 0.15s;
+        }
+
+        .form-group textarea {
+            border-radius: 30px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #c44536;
+            box-shadow: 0 0 0 3px rgba(196, 69, 54, 0.15);
+        }
+
+        .file-hint {
+            font-size: 0.85rem;
+            color: #6c7a86;
+            margin-top: 0.2rem;
+        }
+
+        .submit-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1.2rem;
+            margin-top: 1rem;
+        }
+
+        /* 分类区域标题 */
+        .section-category {
+            display: flex;
+            gap: 0.8rem;
+            align-items: baseline;
+            margin: 2.5rem 0 1.2rem 0;
+        }
+        .section-category h3 {
+            font-size: 1.8rem;
+            font-weight: 350;
+            color: #2f4a5c;
+        }
+        .section-category .count {
+            background: #dbd1c6;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            color: #1e2b36;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 2.5rem;
+            background: #f1ebe4;
+            border-radius: 40px;
+            color: #5f6f7c;
+            font-style: italic;
+        }
+
+        /* 三列布局 */
+        .papers-dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.8rem;
+            margin-top: 1rem;
+        }
+
+        .col {
+            min-width: 0; /* 防止溢出 */
+        }
+
+        hr {
+            border: none;
+            border-top: 2px dotted #d4c5b7;
+            margin: 1.2rem 0;
+        }
+
+        footer {
+            margin-top: 4rem;
+            text-align: center;
+            color: #9b8f82;
+            font-size: 0.9rem;
+            border-top: 1px solid #d9cec2;
+            padding-top: 1.8rem;
+        }
+
+        @media (max-width: 900px) {
+            .papers-dashboard {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .journal-header h1 {
+                font-size: 2.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 期刊头 -->
+    <header class="journal-header">
+        <h1>delicious <small>a journal of tasty ideas</small></h1>
+        <p>—— 作者投稿 · 编辑审稿 · 纯净模拟 ——</p>
+    </header>
+
+    <!-- 投稿表单 -->
+    <section class="submit-section">
+        <h2>📮 投递新稿件</h2>
+        <form id="submitForm" class="form-grid">
+            <div class="form-group">
+                <label>稿件标题 *</label>
+                <input type="text" id="paperTitle" placeholder="例如：甜点美学的量化研究" required>
+            </div>
+            <div class="form-group">
+                <label>作者 *</label>
+                <input type="text" id="paperAuthor" placeholder="姓名或团队" required>
+            </div>
+            <div class="form-group full-width">
+                <label>摘要</label>
+                <textarea id="paperAbstract" placeholder="简述您的美味发现……"></textarea>
+            </div>
+            <div class="form-group">
+                <label>关键词</label>
+                <input type="text" id="paperKeywords" placeholder="例如：巧克力, 发酵, 口感">
+            </div>
+            <div class="form-group">
+                <label>稿件文件 (模拟)</label>
+                <input type="file" id="paperFile" accept=".pdf,.doc,.txt">
+                <div class="file-hint">仅保存文件名，不上传服务器</div>
+            </div>
+            <div class="submit-actions">
+                <button type="reset" class="btn btn-outline">清空</button>
+                <button type="submit" class="btn btn-primary">提交稿件</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- 审稿看板：三列状态 -->
+    <div class="papers-dashboard">
+        <!-- 待审稿列 -->
+        <div class="col">
+            <div class="section-category">
+                <h3>⏳ 待审稿</h3>
+                <span class="count" id="submittedCount">0</span>
+            </div>
+            <div id="submittedList" class="paper-list">
+                <!-- 动态渲染待审稿件 -->
+                <div class="empty-message">暂无待审稿件</div>
+            </div>
+        </div>
+
+        <!-- 已接受列 -->
+        <div class="col">
+            <div class="section-category">
+                <h3>✅ 已接受</h3>
+                <span class="count" id="acceptedCount">0</span>
+            </div>
+            <div id="acceptedList" class="paper-list">
+                <div class="empty-message">暂无已接受稿件</div>
+            </div>
+        </div>
+
+        <!-- 已拒绝列 -->
+        <div class="col">
+            <div class="section-category">
+                <h3>❌ 已拒绝</h3>
+                <span class="count" id="rejectedCount">0</span>
+            </div>
+            <div id="rejectedList" class="paper-list">
+                <div class="empty-message">暂无已拒绝稿件</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>🍽️ Delicious Journal · 本地数据持久化 · 每次打开自动加载已有稿件</p>
+        <p style="font-size:0.8rem; margin-top:0.5rem;">审稿操作：接受 / 拒绝 稿件，状态立即更新</p>
+    </footer>
+</div>
+
+<script>
+(function() {
+    // 后端 API 基础地址（开发时是 http://127.0.0.1:5000/api）
+    // 当部署到线上时，需要改成线上地址
+    const API_BASE = '/api';  // 因为前端由 Flask 直接提供，所以可以用相对路径
+
+    // ---------- 数据获取与渲染 ----------
+    let papers = [];  // 全局存储所有稿件
+
+    // 从后端获取所有稿件
+    async function fetchPapers() {
+        try {
+            const response = await fetch(API_BASE + '/papers');
+            papers = await response.json();
+            renderAllLists();
+        } catch (error) {
+            console.error('获取稿件失败:', error);
+        }
+    }
+
+    // 渲染三列
+    function renderAllLists() {
+        // 过滤不同状态的稿件
+        const submitted = papers.filter(p => p.status === 'submitted');
+        const accepted = papers.filter(p => p.status === 'accepted');
+        const rejected = papers.filter(p => p.status === 'rejected');
+
+        // 更新计数
+        document.getElementById('submittedCount').textContent = submitted.length;
+        document.getElementById('acceptedCount').textContent = accepted.length;
+        document.getElementById('rejectedCount').textContent = rejected.length;
+
+        // 渲染每个列表
+        renderList('submittedList', submitted);
+        renderList('acceptedList', accepted);
+        renderList('rejectedList', rejected);
+    }
+
+    // 渲染单个列表
+    function renderList(containerId, papersList) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (papersList.length === 0) {
+            container.innerHTML = '<div class="empty-message">暂无稿件</div>';
+            return;
+        }
+
+        container.innerHTML = ''; // 清空
+        papersList.forEach(paper => {
+            const card = createPaperCard(paper);
+            container.appendChild(card);
+        });
+    }
+
+    // 创建单个稿件卡片（与之前类似，但按钮事件通过委托处理）
+    function createPaperCard(paper) {
+        const card = document.createElement('div');
+        card.className = `paper-card ${paper.status}`;
+        card.dataset.id = paper.id;
+
+        const statusMap = {
+            'submitted': '待审',
+            'accepted': '已接受',
+            'rejected': '已拒绝'
+        };
+
+        let actionButtons = '';
+        if (paper.status === 'submitted') {
+            actionButtons = `
+                <div class="paper-actions">
+                    <button class="btn btn-accept btn-sm" data-action="accept">✓ 接受</button>
+                    <button class="btn btn-reject btn-sm" data-action="reject">✗ 拒绝</button>
+                    <button class="btn btn-outline btn-sm" data-action="delete">🗑️ 删除</button>
+                </div>
+            `;
+        } else {
+            actionButtons = `
+                <div class="paper-actions">
+                    <button class="btn btn-outline btn-sm" data-action="delete">🗑️ 删除</button>
+                </div>
+            `;
+        }
+
+        card.innerHTML = `
+            <div class="paper-title">
+                <span>${escapeHtml(paper.title)}</span>
+                <span class="status-badge ${paper.status}">${statusMap[paper.status]}</span>
+            </div>
+            <div class="paper-meta">
+                <span>✍️ ${escapeHtml(paper.author)}</span>
+                <span>📅 ${paper.submitted_date}</span>
+                <span>🏷️ ${escapeHtml(paper.keywords)}</span>
+            </div>
+            <div class="paper-abstract">${escapeHtml(paper.abstract)}</div>
+            <div class="paper-file">📎 稿件文件：${escapeHtml(paper.file_name)}</div>
+            ${actionButtons}
+        `;
+
+        return card;
+    }
+
+    // 简单的转义函数，防止 XSS
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // ---------- 与后端交互的函数 ----------
+    async function submitPaper(event) {
+        event.preventDefault();
+
+        const title = document.getElementById('paperTitle').value.trim();
+        const author = document.getElementById('paperAuthor').value.trim();
+        const abstract = document.getElementById('paperAbstract').value.trim();
+        const keywords = document.getElementById('paperKeywords').value.trim();
+        const fileInput = document.getElementById('paperFile');
+        const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : '';
+
+        if (!title || !author) {
+            alert('请至少填写标题和作者');
+            return;
+        }
+
+        const newPaper = {
+            title: title,
+            author: author,
+            abstract: abstract || '(无摘要)',
+            keywords: keywords || '(无关键词)',
+            file_name: fileName
+        };
+
+        try {
+            const response = await fetch(API_BASE + '/papers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newPaper)
+            });
+            if (response.ok) {
+                // 重新获取最新列表
+                await fetchPapers();
+                document.getElementById('submitForm').reset();
+                alert('投稿成功！');
+            } else {
+                const err = await response.json();
+                alert('投稿失败：' + (err.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('网络错误，请稍后重试');
+        }
+    }
+
+    // 更新稿件状态
+    async function updatePaperStatus(paperId, newStatus) {
+        try {
+            const response = await fetch(API_BASE + '/papers/' + paperId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (response.ok) {
+                await fetchPapers(); // 重新加载数据
+            } else {
+                alert('操作失败');
+            }
+        } catch (error) {
+            alert('网络错误');
+        }
+    }
+
+    // 删除稿件
+    async function deletePaper(paperId) {
+        if (!confirm('确定要删除这篇稿件吗？')) return;
+        try {
+            const response = await fetch(API_BASE + '/papers/' + paperId, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                await fetchPapers();
+            } else {
+                alert('删除失败');
+            }
+        } catch (error) {
+            alert('网络错误');
+        }
+    }
+
+    // ---------- 事件委托 ----------
+    function setupDelegation() {
+        document.querySelector('.papers-dashboard').addEventListener('click', async (e) => {
+            const target = e.target;
+            if (!target.classList.contains('btn')) return;
+
+            const card = target.closest('.paper-card');
+            if (!card) return;
+            const paperId = card.dataset.id;
+
+            const action = target.dataset.action;
+
+            if (action === 'accept') {
+                await updatePaperStatus(paperId, 'accepted');
+            } else if (action === 'reject') {
+                await updatePaperStatus(paperId, 'rejected');
+            } else if (action === 'delete') {
+                await deletePaper(paperId);
+            }
+        });
+    }
+
+    // ---------- 初始化 ----------
+    window.addEventListener('DOMContentLoaded', () => {
+        // 获取所有稿件
+        fetchPapers();
+
+        // 设置事件委托
+        setupDelegation();
+
+        // 绑定表单提交
+        document.getElementById('submitForm').addEventListener('submit', submitPaper);
+    });
+})();
+</script>
+</body>
+</html>
