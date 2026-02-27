@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delicious 期刊 · 审稿</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Georgia', serif; }
+        body { background: #faf7f2; color: #2c3e4f; padding: 2rem 1rem; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #c44536; padding-bottom: 1rem; }
+        .header h1 { font-size: 2.5rem; color: #c44536; }
+        .header a { color: #c44536; text-decoration: none; }
+        .papers-dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.8rem; }
+        .col { min-width: 0; }
+        .section-category { display: flex; gap: 0.8rem; align-items: baseline; margin-bottom: 1.2rem; }
+        .section-category h3 { font-size: 1.8rem; font-weight: 400; }
+        .section-category .count { background: #dbd1c6; padding: 0.2rem 0.8rem; border-radius: 40px; }
+        .paper-card { background: white; border-radius: 18px; padding: 1.5rem; margin-bottom: 1.5rem; border-left: 6px solid; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+        .paper-card.submitted { border-left-color: #f39c12; }
+        .paper-card.accepted { border-left-color: #27ae60; }
+        .paper-card.rejected { border-left-color: #c0392b; }
+        .paper-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
+        .status-badge { font-size: 0.85rem; padding: 0.3rem 1rem; border-radius: 40px; background: #ecf0f1; }
+        .status-badge.submitted { background: #fcf3e0; color: #b85c1a; }
+        .status-badge.accepted { background: #e2f3e4; color: #1e6f3f; }
+        .status-badge.rejected { background: #f5e1de; color: #a5281b; }
+        .paper-meta { font-size: 0.9rem; color: #4d6575; margin-bottom: 0.8rem; border-bottom: 1px dashed #d9d0c5; padding-bottom: 0.5rem; }
+        .paper-abstract { font-size: 0.95rem; background: #f9f5ef; padding: 0.8rem; border-radius: 24px; margin-bottom: 0.8rem; }
+        .paper-file { font-size: 0.9rem; background: #f0ede9; padding: 0.4rem 1rem; border-radius: 30px; display: inline-block; margin-bottom: 1rem; }
+        .paper-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .btn { border: 1px solid transparent; padding: 0.4rem 1.2rem; border-radius: 40px; cursor: pointer; font-size: 0.9rem; }
+        .btn-accept { background: #e2f3e4; border-color: #27ae60; color: #1e6f3f; }
+        .btn-reject { background: #f5e1de; border-color: #c0392b; color: #a5281b; }
+        .btn-outline { border-color: #b0a28f; background: white; }
+        .btn:hover { opacity: 0.8; }
+        .empty-message { text-align: center; padding: 2rem; background: #f1ebe4; border-radius: 40px; color: #5f6f7c; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>delicious · 审稿</h1>
+        <a href="/reviewer/logout">登出</a>
+    </div>
+
+    <div class="papers-dashboard">
+        <div class="col">
+            <div class="section-category"><h3>⏳ 待审稿</h3><span class="count" id="submittedCount">0</span></div>
+            <div id="submittedList" class="paper-list"></div>
+        </div>
+        <div class="col">
+            <div class="section-category"><h3>✅ 已接受</h3><span class="count" id="acceptedCount">0</span></div>
+            <div id="acceptedList" class="paper-list"></div>
+        </div>
+        <div class="col">
+            <div class="section-category"><h3>❌ 已拒绝</h3><span class="count" id="rejectedCount">0</span></div>
+            <div id="rejectedList" class="paper-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = '/api';
+let papers = [];
+
+async function fetchPapers() {
+    try {
+        const res = await fetch(API_BASE + '/papers');
+        if (!res.ok) {
+            if (res.status === 401) window.location.href = '/reviewer/login';
+            return;
+        }
+        papers = await res.json();
+        renderAll();
+    } catch (err) {
+        console.error('获取稿件失败', err);
+    }
+}
+
+function renderAll() {
+    const submitted = papers.filter(p => p.status === 'submitted');
+    const accepted = papers.filter(p => p.status === 'accepted');
+    const rejected = papers.filter(p => p.status === 'rejected');
+
+    document.getElementById('submittedCount').textContent = submitted.length;
+    document.getElementById('acceptedCount').textContent = accepted.length;
+    document.getElementById('rejectedCount').textContent = rejected.length;
+
+    renderList('submittedList', submitted);
+    renderList('acceptedList', accepted);
+    renderList('rejectedList', rejected);
+}
+
+function renderList(containerId, list) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty-message">暂无稿件</div>';
+        return;
+    }
+    container.innerHTML = '';
+    list.forEach(paper => {
+        const card = createCard(paper);
+        container.appendChild(card);
+    });
+}
+
+function createCard(paper) {
+    const card = document.createElement('div');
+    card.className = `paper-card ${paper.status}`;
+    card.dataset.id = paper.id;
+
+    const statusMap = { submitted: '待审', accepted: '已接受', rejected: '已拒绝' };
+    let fileHtml = paper.file_name ?
+        `<a href="https://${ALI_BUCKET}.${ALI_REGION}.aliyuncs.com/${paper.file_name}" target="_blank">${escapeHtml(paper.file_name)}</a>` :
+        '无文件';
+
+    let actionButtons = '';
+    if (paper.status === 'submitted') {
+        actionButtons = `
+            <div class="paper-actions">
+                <button class="btn btn-accept" data-action="accept">✓ 接受</button>
+                <button class="btn btn-reject" data-action="reject">✗ 拒绝</button>
+                <button class="btn btn-outline" data-action="delete">🗑️ 删除</button>
+            </div>
+        `;
+    } else {
+        actionButtons = `
+            <div class="paper-actions">
+                <button class="btn btn-outline" data-action="delete">🗑️ 删除</button>
+            </div>
+        `;
+    }
+
+    card.innerHTML = `
+        <div class="paper-title">
+            <span>${escapeHtml(paper.title)}</span>
+            <span class="status-badge ${paper.status}">${statusMap[paper.status]}</span>
+        </div>
+        <div class="paper-meta">✍️ ${escapeHtml(paper.author)} · 📅 ${paper.submitted_date} · 🏷️ ${escapeHtml(paper.keywords)}</div>
+        <div class="paper-abstract">${escapeHtml(paper.abstract)}</div>
+        <div class="paper-file">📎 稿件文件：${fileHtml}</div>
+        ${actionButtons}
+    `;
+    return card;
+}
+
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+// 事件委托
+document.querySelector('.papers-dashboard').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+    const card = btn.closest('.paper-card');
+    if (!card) return;
+    const paperId = card.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === 'accept' || action === 'reject') {
+        await updatePaperStatus(paperId, action === 'accept' ? 'accepted' : 'rejected');
+    } else if (action === 'delete') {
+        await deletePaper(paperId);
+    }
+});
+
+async function updatePaperStatus(id, status) {
+    try {
+        const res = await fetch(API_BASE + '/papers/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) {
+            await fetchPapers();
+        } else if (res.status === 401) {
+            window.location.href = '/reviewer/login';
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function deletePaper(id) {
+    if (!confirm('确定删除这篇稿件吗？')) return;
+    try {
+        const res = await fetch(API_BASE + '/papers/' + id, { method: 'DELETE' });
+        if (res.ok) {
+            await fetchPapers();
+        } else if (res.status === 401) {
+            window.location.href = '/reviewer/login';
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// 获取阿里云配置（从全局变量或后端获取，这里简化：需要你手动填写）
+// 你可以从后端传递这些变量，或直接写死（因为存储桶是公开的）
+const ALI_BUCKET = '你的存储桶名称';   // 请替换为实际值
+const ALI_REGION = '你的地域代码';     // 如 oss-cn-beijing
+
+fetchPapers();
+</script>
+</body>
+</html>
