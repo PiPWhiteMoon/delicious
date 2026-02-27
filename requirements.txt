@@ -1,4 +1,4 @@
 Flask
 Flask-SQLAlchemy
 Flask-CORS
-gunicorn
+oss2
